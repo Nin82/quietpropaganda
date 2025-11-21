@@ -1,62 +1,48 @@
-/* =========================================================
-   FIX GOOGLE SCRIPT – NO CORS
-   Login tramite IFRAME nascosto
-========================================================= */
+/* ==========================================================
+   CONFIGURAZIONE
+========================================================== */
+const GSCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBa0el2AiOKSq49rbIS9SJMxRaSHGRYrnp6_skMfo79pX1kULs7h7WDthrh7LLzFJrHA/exec";
 
-const GSCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkDo8tlusWtzah4kN8oEdjXpjkyqiKojEXEA9JzzDLOmPKsuinsv_B4HeBAcpE3ozG/exec";
+// utile per non cliccare due volte login
+let loginInProgress = false;
 
-/**
- * Invia una richiesta POST a Google Apps Script tramite un iframe,
- * aggira il CORS, riceve la risposta tramite una finestra figlia.
- */
-function postViaIframe(action, payload, callback) {
-  try {
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
+/* ==========================================================
+   INVIO DATI A GOOGLE APPS SCRIPT (VIA IFRAME)
+========================================================== */
+function postToGoogleScript(data) {
+  return new Promise((resolve) => {
+    const frame = document.getElementById("gasFrame");
 
+    // Listener risposta
+    function handleMessage(event) {
+      // accetta solo messaggi validi
+      if (typeof event.data !== "object") return;
+      window.removeEventListener("message", handleMessage);
+
+      resolve(event.data);
+    }
+
+    window.addEventListener("message", handleMessage);
+
+    // Crea form nascosto
     const form = document.createElement("form");
-    form.method = "POST";
     form.action = GSCRIPT_URL;
-    form.target = iframe.name = "gs_iframe_" + Date.now();
-    form.style.display = "none";
+    form.method = "POST";
+    form.target = "gasFrame";
 
     const input = document.createElement("input");
     input.type = "hidden";
     input.name = "data";
-    input.value = JSON.stringify({ action, ...payload });
+    input.value = JSON.stringify(data);
 
     form.appendChild(input);
     document.body.appendChild(form);
 
-    iframe.onload = () => {
-      try {
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        const pre = doc.querySelector("pre");
-
-        if (!pre) {
-          callback({ ok: false, error: "Risposta non valida dal server" });
-        } else {
-          callback(JSON.parse(pre.textContent));
-        }
-      } catch (err) {
-        callback({ ok: false, error: "Errore lettura risposta" });
-      }
-
-      // pulizia
-      setTimeout(() => {
-        iframe.remove();
-        form.remove();
-      }, 100);
-    };
-
     form.submit();
-
-  } catch (err) {
-    console.error("Errore iframe:", err);
-    callback({ ok: false, error: "Errore interno iframe" });
-  }
+    form.remove();
+  });
 }
+
 
 // Ruoli normalizzati
 const ROLES = {
@@ -670,22 +656,66 @@ async function initAutoLogin() {
   }
 }
 
-function handleLoginClick() {
-  const user = document.getElementById("user").value;
-  const password = document.getElementById("password").value;
+async function handleLoginClick() {
+  if (loginInProgress) return;
+  loginInProgress = true;
 
-  postViaIframe("login", { user, password }, (res) => {
-    console.log("RISPOSTA LOGIN:", res);
+  const emailEl = document.getElementById("login-email");
+  const passEl = document.getElementById("login-password");
+  const statusEl = document.getElementById("login-status");
 
-    if (!res.ok) {
-      alert(res.error);
+  if (!emailEl || !passEl) {
+    console.error("⚠️ ATTENZIONE: gli ID login-email / login-password non esistono.");
+    loginInProgress = false;
+    return;
+  }
+
+  const user = emailEl.value.trim();
+  const password = passEl.value.trim();
+
+  if (!user || !password) {
+    statusEl.textContent = "Inserisci email e password.";
+    statusEl.className = "text-xs text-red-600";
+    statusEl.classList.remove("hidden");
+    loginInProgress = false;
+    return;
+  }
+
+  statusEl.textContent = "Connessione...";
+  statusEl.classList.remove("hidden");
+  statusEl.className = "text-xs text-blue-600";
+
+  try {
+    const response = await postToGoogleScript({
+      action: "login",
+      user,
+      password,
+    });
+
+    console.log("Risposta GAS:", response);
+
+    if (!response.ok) {
+      statusEl.textContent = response.error || "Errore login.";
+      statusEl.className = "text-xs text-red-600";
+      loginInProgress = false;
       return;
     }
 
-    alert("Login OK: " + res.user.user);
+    // SUCCESSO LOGIN
+    statusEl.textContent = "Accesso effettuato!";
+    statusEl.className = "text-xs text-green-600";
 
-    // continua con la tua logica...
-  });
+    // QUI attivi la UI corretta (admin/worker)
+    // Per ora facciamo solo vedere che funziona.
+    alert("LOGIN OK – Utente: " + response.user.user);
+
+  } catch (err) {
+    console.error("Errore login:", err);
+    statusEl.textContent = "Errore di connessione.";
+    statusEl.className = "text-xs text-red-600";
+  }
+
+  loginInProgress = false;
 }
 
 
