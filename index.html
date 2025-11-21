@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Konsequenz – Workflow Foto Prodotto</title>
+
+  <meta name="theme-color" content="#0f172a">
+
+  <!-- MANIFEST -->
+  <link rel="manifest" href="manifest.json">
+  <!-- Tailwind (va bene anche in CDN per ora) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Backendless -->
+  <script src="https://cdn.jsdelivr.net/npm/backendless"></script>
+
+  <!-- XLSX per import Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- CSS custom -->
+  <link rel="stylesheet" href="styles.css?v=999" />
+</head>
+
+<body class="min-h-screen text-slate-800">
+
+  <!-- Layout principale -->
+  <div class="flex min-h-screen">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="fixed md:static -left-64 md:left-0 top-0 h-screen w-64 bg-slate-900 text-slate-100
+              py-6 px-4 shadow-lg z-50 transition-all duration-300">
+
+      <div class="px-3 mb-8">
+        <h1 class="text-2xl font-extrabold tracking-tight">Quiet Propaganda</h1>
+        <p class="text-xs text-slate-400">Workflow prodotti – Konsequenz</p>
+      </div>
+
+      <div id="sidebar-user" class="px-3 py-3 mb-6 bg-slate-800/80 rounded-xl border border-slate-700">
+        <p class="text-xs text-slate-400 mb-1">Utente corrente</p>
+        <p id="sidebar-username" class="text-sm font-semibold">Ospite</p>
+        <p id="sidebar-role" class="text-xs text-emerald-300 font-medium">Non loggato</p>
+      </div>
+
+      <nav class="flex-1 space-y-2 text-sm">
+        <button id="nav-admin" class="sidebar-btn hidden" onclick="showSection('admin')">
+          Pannello Admin
+        </button>
+        <button id="nav-worker" class="sidebar-btn hidden" onclick="showSection('worker')">
+          Area Lavoratori
+        </button>
+      </nav>
+
+      <button id="logout-btn"
+        class="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 hover:bg-rose-700 px-3 py-2 text-sm font-semibold shadow-md hidden"
+        onclick="handleLogout()">
+        <span>Logout</span>
+      </button>
+
+    </aside>
+
+    <!-- OVERLAY MOBILE (necessario!) -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/40 z-40 hidden md:hidden" onclick="closeSidebar()"></div>
+
+    <!-- CONTENUTO PRINCIPALE -->
+    <main class="flex-1 p-4 md:p-8 overflow-x-hidden">
+
+      <!-- Pulsante apertura sidebar mobile -->
+      <button class="md:hidden mb-4 p-2 bg-slate-900 text-white rounded" onclick="openSidebar()">
+        ☰ Menu
+      </button>
+
+      <!-- LOGIN VIEW ---->
+      <section id="login-view"
+        class="max-w-md mx-auto mt-16 bg-white/90 rounded-2xl shadow-xl border border-slate-200 p-8">
+        <h2 class="text-2xl font-bold mb-4 text-slate-800 text-center">
+          Accesso al sistema
+        </h2>
+        <p class="text-sm text-slate-500 mb-6 text-center">
+          Inserisci le tue credenziali. Il primo accesso lo gestisce lo sviluppatore
+          fornendo le credenziali Admin iniziali.
+        </p>
+
+        <div class="space-y-4 mb-4">
+          <div>
+            <label class="form-label" for="login-email">Email</label>
+            <input id="login-email" type="email" class="form-input" placeholder="nome@azienda.it" />
+          </div>
+          <div>
+            <label class="form-label" for="login-password">Password</label>
+            <input id="login-password" type="password" class="form-input" placeholder="••••••••" />
+          </div>
+        </div>
+
+        <button class="w-full btn-primary py-2.5 text-sm font-semibold" onclick="handleLoginClick()">
+          Accedi
+        </button>
+
+        <p id="login-status" class="mt-4 text-xs text-center hidden"></p>
+      </section>
+
+      <!-- ADMIN DASHBOARD -->
+      <section id="admin-view" class="hidden space-y-6">
+
+        <!-- 🔽 FILTRO DATA DAL / AL -->
+        <div class="flex gap-4 items-end p-3 rounded bg-slate-100">
+
+          <div class="flex flex-col">
+            <label class="text-[11px] font-medium">Dal</label>
+            <input id="filter-date-from" type="date" class="form-input text-xs" />
+          </div>
+
+          <div class="flex flex-col">
+            <label class="text-[11px] font-medium">Al</label>
+            <input id="filter-date-to" type="date" class="form-input text-xs" />
+          </div>
+
+          <button onclick="loadAdminOrdersWithDate()" class="btn-primary text-xs px-3 py-2">
+            Filtra
+          </button>
+
+          <button onclick="loadAdminOrders()" class="btn-secondary text-xs px-3 py-2">
+            Ultimi 30 giorni
+          </button>
+
+          <button onclick="clearDateFilter()" class="btn-secondary text-xs px-3 py-2">
+            Annulla filtro date
+          </button>
+        </div>
+        <!-- 🔼 FINE FILTRO DATA -->
+
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h2 class="text-2xl font-bold tracking-tight">Pannello Amministratore</h2>
+            <p class="text-sm text-slate-500">
+              Gestione utenti, import ordini, pipeline e statistiche.
+            </p>
+          </div>
+          <div class="flex gap-2 items-center">
+            <span id="admin-badge"
+              class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-semibold">
+              Admin attivo
+            </span>
+            <button class="btn-secondary text-xs" onclick="handleLogout()">Logout</button>
+          </div>
+        </div>
+
+        <!-- Toggle sezioni -->
+        <div class="flex flex-wrap gap-4 text-sm">
+          <label class="flex items-center gap-2">
+            <input id="toggle-users" type="checkbox" class="toggle-switch" checked />
+            <span>Gestione Utenti</span>
+          </label>
+          <label class="flex items-center gap-2">
+            <input id="toggle-import" type="checkbox" class="toggle-switch" checked />
+            <span>Import Ordini</span>
+          </label>
+          <label class="flex items-center gap-2">
+            <input id="toggle-orders" type="checkbox" class="toggle-switch" checked />
+            <span>Tabella Ordini</span>
+          </label>
+          <label class="flex items-center gap-2">
+            <input id="toggle-stats" type="checkbox" class="toggle-switch" checked />
+            <span>Statistiche</span>
+          </label>
+        </div>
+
+        <!-- =======================
+             GESTIONE UTENTI ADMIN
+        ======================== -->
+        <div id="card-users" class="card">
+          <h3 class="card-title">Gestione Utenti e Ruoli</h3>
+
+          <button class="btn-secondary text-xs mb-3 btn-open-overlay"
+            onclick="openCardOverlay('card-users')">
+            Apri in sovraimpressione
+          </button>
+
+          <!-- Crea utente -->
+          <div class="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-4">
+            <h4 class="font-semibold text-sm mb-3">Crea nuovo utente</h4>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+              <input id="new-user-email" type="email" class="form-input" placeholder="Email utente" />
+              <input id="new-user-password" type="password" class="form-input" placeholder="Password iniziale" />
+              <select id="new-user-role" class="form-input">
+                <option value="">Ruolo…</option>
+                <option value="Admin">Admin</option>
+                <option value="Warehouse">Magazzino</option>
+                <option value="Photographer">Photographer</option>
+                <option value="PostProducer">PostProducer</option>
+                <option value="Partner">Partner</option>
+                <option value="Customer">Customer</option>
+              </select>
+              <button class="btn-primary text-sm" onclick="handleCreateUser()">Crea Utente</button>
+            </div>
+            <p id="user-create-status" class="text-xs mt-1 hidden"></p>
+          </div>
+
+          <!-- Tabella utenti -->
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-sm">Utenti esistenti</h4>
+            <span id="users-loading" class="text-xs text-slate-400">Caricamento…</span>
+          </div>
+
+          <div class="overflow-x-auto border rounded-xl bg-white">
+            <table class="min-w-full text-xs">
+              <thead class="bg-slate-100 text-slate-600">
+                <tr>
+                  <th class="th">Email</th>
+                  <th class="th">Ruolo</th>
+                  <th class="th">Azioni</th>
+                </tr>
+
+                <!-- FILTRI -->
+                <tr id="users-filter-row" class="border-t border-slate-200 bg-slate-100">
+                  <td class="px-3 py-1">
+                    <input type="text" placeholder="Filtro" data-filter="email" class="form-input-filter"
+                      oninput="applyUsersFilter()">
+                  </td>
+
+                  <td class="px-3 py-1">
+                    <input type="text" placeholder="Filtro" data-filter="role" class="form-input-filter"
+                      oninput="applyUsersFilter()">
+                  </td>
+
+                  <td class="px-3 py-1"></td>
+                </tr>
+              </thead>
+
+              <tbody id="users-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MODALE PERMESSI UTENTE -->
+<div id="permissions-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+  <div class="bg-white rounded-xl shadow-2xl w-[95%] max-w-3xl max-h-[90vh] overflow-y-auto p-5 relative">
+
+    <!-- Pulsante chiusura -->
+    <button class="absolute top-3 right-3 text-xl leading-none text-slate-400 hover:text-slate-700"
+      onclick="closePermissionsModal()">&times;</button>
+
+    <!-- HEADER -->
+    <div class="mb-4">
+      <h3 class="text-lg font-semibold">Permessi utente</h3>
+      <p id="permissions-user-email" class="text-xs text-slate-500"></p>
+    </div>
+
+    <!-- CONTENUTO -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
+      <div class="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+        <h4 class="text-xs font-semibold mb-2">Colonne VISIBILI</h4>
+        <div id="perm-visible-fields" class="space-y-1 text-xs"></div>
+      </div>
+
+      <div class="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+        <h4 class="text-xs font-semibold mb-2">Colonne MODIFICABILI</h4>
+        <div id="perm-editable-fields" class="space-y-1 text-xs"></div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="flex justify-between mt-4">
+      
+      
+
+      <div class="flex gap-2">
+        <button class="btn-secondary text-xs px-3 py-1.5" onclick="closePermissionsModal()">Annulla</button>
+        <button class="btn-primary text-xs px-3 py-1.5" onclick="saveUserPermissions()">Salva permessi</button>
+      </div>
+    </div>
+
+    <p id="permissions-status" class="text-xs mt-2 hidden"></p>
+
+  </div>
+</div>
+
+
+
+<!-- Delete User Modal -->
+<div id="delete-user-modal"
+     class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-5 w-80 shadow-lg">
+    <h2 class="text-lg font-semibold text-red-600 mb-3">Elimina Utente</h2>
+    <p id="delete-user-email" class="text-sm text-gray-700 mb-4"></p>
+
+    <div class="flex justify-end gap-3">
+      <button class="btn-secondary text-xs"
+              onclick="closeDeleteUserModal()">
+        Annulla
+      </button>
+      <button class="btn-danger text-xs"
+              onclick="deleteUserConfirmed()">
+        Elimina
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="reset-pw-modal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-[99999]">
+  <div class="bg-white p-5 rounded-xl w-80 shadow-xl">
+
+    <h2 class="text-lg font-semibold mb-2">Reset Password</h2>
+    <p id="reset-pw-user-email" class="text-xs text-slate-500 mb-3"></p>
+
+    <input id="reset-pw-input"
+      type="password"
+      placeholder="Nuova password"
+      class="w-full text-sm border rounded px-2 py-1 mb-4">
+
+    <div class="flex justify-end gap-2">
+      <button class="btn-secondary text-xs" onclick="closeResetPwModal()">Annulla</button>
+      <button class="btn-danger text-xs" onclick="confirmResetPassword()">Conferma</button>
+    </div>
+
+  </div>
+</div>
+
+        <!-- CARD: Import ordini -->
+        <div id="card-import" class="card">
+          <h3 class="card-title">Import Ordini da Excel</h3>
+
+          <button class="btn-secondary text-xs mb-3 btn-open-overlay"
+           onclick="openCardOverlay('card-import')">
+           Apri in sovraimpressione
+          </button>
+
+
+          <p class="text-xs text-slate-500 mb-4">
+            Carica un file XLSX/XLS con le colonne configurate (Codice Articolo, Ean Code, Brand, Colore, Taglia, ecc.).
+            Ogni nuova riga viene creata come ordine <strong>"In attesa magazzino"</strong>.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+            <input id="import-origin" class="form-input" placeholder="Provenienza" />
+            <input id="import-type" class="form-input" placeholder="Tipologia" />
+            <input id="import-order-number" class="form-input" placeholder="Numero ordine" />
+            <input id="import-order-date" type="date" class="form-input" />
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 mb-3">
+            <input id="import-file" type="file" accept=".xlsx, .xls" class="text-xs" />
+            <button class="btn-primary text-xs px-4 py-1.5" onclick="handleImportClick()">
+              Importa file
+            </button>
+            <span id="import-status" class="text-xs text-slate-500"></span>
+          </div>
+
+          <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-3">
+            <div id="import-progress" class="h-2 bg-emerald-500 w-0"></div>
+          </div>
+
+          <pre id="import-log"
+            class="text-[10px] bg-slate-900 text-slate-100 rounded-lg p-3 max-h-48 overflow-auto hidden"></pre>
+        </div>
+
+        <!-- CARD STATISTICHE -->
+        <div id="card-stats" class="card">
+          <h3 class="card-title">Statistiche</h3>
+
+          <button class="btn-secondary text-xs mb-3 btn-open-overlay"
+           onclick="openCardOverlay('card-stats')">
+           Apri in sovraimpressione
+          </button>
+
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" id="stats-summary"></div>
+
+          <div class="bg-white rounded-xl border border-slate-200 p-4">
+            <canvas id="stats-chart" class="w-full h-64"></canvas>
+          </div>
+        </div>
+
+        <div id="card-orders" class="card overflow-x-hidden">
+
+          <!-- Header card -->
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="card-title mb-0">Ordini (vista Admin)</h3>
+             <span id="orders-loading" class="text-xs text-slate-400">Caricamento…</span>
+          </div>
+
+          
+          <!-- Bulk assign -->
+          <div class="flex items-center flex-wrap gap-2 mb-3">
+
+            <!-- Riassegna -->
+            <select id="bulk-worker-select" class="form-input text-xs w-48"></select>
+            <button onclick="doBulkAssign()" class="btn-primary text-xs">
+              Riassegna selezionati
+            </button>
+
+            <!-- Elimina -->
+            <button onclick="deleteSelectedOrders()"
+              class="btn-secondary text-xs bg-red-600 hover:bg-red-700 text-white">
+              Elimina selezionati
+            </button>
+
+            <!-- Scarica -->
+            <button onclick="downloadSelectedOrders()" class="btn-secondary text-xs">
+              Download selezionati
+            </button>
+          </div>
+
+          <!-- Scroll wrapper -->
+          <div class="border rounded-xl bg-white text-xs w-full overflow-x-auto">
+
+            <!-- Vertical scroll -->
+            <div class="max-h-[500px] overflow-y-auto">
+
+              <table class="min-w-max" id="admin-orders-table">
+                <thead class="bg-slate-100 text-slate-600 sticky top-0 z-20">
+                  <tr id="orders-header-row"></tr>
+                  <tr id="orders-filter-row" class="border-t border-slate-200 bg-slate-100"></tr>
+                </thead>
+
+                <tbody id="orders-table-body" class="divide-y divide-slate-100"></tbody>
+              </table>
+
+            </div>
+          </div>
+
+      </section>
+
+      <!-- WORKER DASHBOARD (bozza, la completiamo dopo) -->
+      <section id="worker-view" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl font-bold tracking-tight">Area Lavoratori</h2>
+            <p class="text-xs text-slate-500" id="worker-role-info"></p>
+          </div>
+          <button class="btn-secondary text-xs" onclick="handleLogout()">Logout</button>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">I tuoi ordini</h3>
+          <p id="worker-orders-loading" class="text-xs text-slate-400">Caricamento…</p>
+
+          <div class="overflow-x-auto border rounded-xl bg-white text-xs mt-2">
+            <table class="min-w-full" id="worker-orders-table">
+              <thead class="bg-slate-100 text-slate-600">
+                <tr id="worker-orders-header"></tr>
+                <tr id="worker-filter-row"></tr>
+              </thead>
+              <tbody id="worker-orders-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 p-2 rounded-md text-xs text-white bg-slate-700 hidden">
+  </div>
+
+  <!-- MODALE MODIFICA ORDINE -->
+  <div id="order-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+
+    <div class="bg-white rounded-xl shadow-2xl w-[95%] max-w-3xl max-h-[90vh] overflow-y-auto p-5">
+
+      <!-- HEADER -->
+      <div class="flex justify-between items-start mb-4">
+        <div>
+          <h3 class="text-lg font-semibold">Modifica Ordine</h3>
+          <p id="order-modal-id" class="text-[11px] text-slate-500"></p>
+        </div>
+
+        <button class="text-xl leading-none text-slate-400 hover:text-slate-700"
+          onclick="closeOrderModal()">&times;</button>
+      </div>
+
+      <!-- CAMPI DINAMICI -->
+      <div id="order-modal-fields" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[55vh] overflow-y-auto pr-1">
+      </div>
+
+      <!-- BOTTONI CAMBIO STATO (GENERATI DA JS) -->
+      <div id="order-modal-status-buttons" class="space-x-2 text-[11px] mt-4"></div>
+
+      <!-- BOTTONI SALVA / ANNULLA -->
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="btn-secondary text-xs px-3 py-1.5" onclick="closeOrderModal()">Annulla</button>
+
+        <button id="order-modal-save-btn" class="btn-primary text-xs px-3 py-1.5"
+          onclick="saveOrderFromModal()">Salva</button>
+      </div>
+
+      <p id="order-modal-status" class="text-xs mt-2 hidden"></p>
+
+    </div>
+  </div>
+
+
+ <!-- Modal per visualizzare le card admin in sovraimpressione -->
+<div id="card-overlay-modal"
+     class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-[99999] p-4">
+
+  <div id="card-overlay-content"
+       class="bg-white rounded-xl shadow-2xl w-[95%] max-w-5xl max-h-[90vh] overflow-y-auto p-6 relative transition-all">
+    
+    <button onclick="closeCardOverlay()"
+            class="absolute top-3 right-3 text-2xl text-slate-400 hover:text-slate-700">
+      &times;
+    </button>
+
+    <!-- QUI verrà inserita la card -->
+  </div>
+</div>
+
+
+<script src="app.js"></script>
+
+<!-- IFRAME PER POST VERSO GOOGLE APPS SCRIPT -->
+<iframe id="gasFrame" name="gasFrame" style="display:none;"></iframe>
+
+
+  <!--
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("service-worker.js")
+        .then(() => console.log("Service Worker registrato"))
+        .catch(err => console.error("Errore Service Worker:", err));
+    });
+  }
+</script>
+-->
+  <script>
+    function openSidebar() {
+      document.getElementById("sidebar").style.left = "0";
+      document.getElementById("sidebar-overlay").classList.remove("hidden");
+    }
+    function closeSidebar() {
+      document.getElementById("sidebar").style.left = "-16rem";
+      document.getElementById("sidebar-overlay").classList.add("hidden");
+    }
+  </script>
+
+
+
+
+</body>
+</html>

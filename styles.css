@@ -1,0 +1,216 @@
+/* ---------------------------------------
+   BASE
+---------------------------------------- */
+
+body {
+  background: #f8fafc; /* sfondo elegante chiaro */
+  color: #0f172a;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ---------------------------------------
+   CARD
+---------------------------------------- */
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06);
+}
+
+.card-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 1rem;
+}
+
+/* ---------------------------------------
+   BOTTONI
+---------------------------------------- */
+
+.btn-primary {
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: white;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0.55rem 1.2rem;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+  transition: 0.2s;
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #4338ca, #4f46e5);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0.55rem 1.2rem;
+  border: 1px solid #c7d2fe;
+  transition: 0.2s;
+}
+.btn-secondary:hover {
+  background: #e0e7ff;
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0.55rem 1.2rem;
+  transition: 0.2s;
+}
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+/* ---------------------------------------
+   INPUT
+---------------------------------------- */
+
+.form-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.9rem;
+  background: white;
+  transition: 0.2s;
+}
+.form-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  outline: none;
+}
+
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+/* ---------------------------------------
+   SIDEBAR
+---------------------------------------- */
+
+#sidebar {
+  background: #1e293b; /* blu notte elegante */
+  color: white;
+}
+
+.sidebar-btn {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  font-weight: 600;
+  border-radius: 10px;
+  background: #334155;
+  transition: 0.2s;
+}
+.sidebar-btn:hover {
+  background: #475569;
+  transform: translateX(3px);
+}
+
+/* User box */
+#sidebar-user {
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 12px;
+}
+
+/* ---------------------------------------
+   TABELLE
+---------------------------------------- */
+
+th.th {
+  padding: 0.6rem 0.75rem;
+  background: #f1f5f9;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+td.td {
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+table {
+  border-spacing: 0;
+}
+
+/* Scrollbar moderna */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
+/* ---------------------------------------
+   MODALI
+---------------------------------------- */
+
+.modal-panel {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.2);
+}
+
+/* ---------------------------------------
+   TOAST
+---------------------------------------- */
+
+#toast-container {
+  background: #1e293b;
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+
+  /* 🔥 Aggiungi queste righe fondamentali */
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 99999;
+  pointer-events: none;
+  max-width: 300px;
+}
+
+
+/* ---------------------------------------
+   ANIMAZIONI
+---------------------------------------- */
+
+.card-pop {
+  transform: scale(0.97);
+  opacity: 0;
+  animation: cardPopIn 0.15s ease-out forwards;
+}
+
+@keyframes cardPopIn {
+  from {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
